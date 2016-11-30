@@ -83,6 +83,7 @@ public:
         std::vector<std::vector<int32_t> > seen_oneof;
         std::string error;
         SV *string;
+        bool damn;
 
         DecoderHandlers(pTHX_ const Mapper *mapper);
 
@@ -132,9 +133,9 @@ public:
     void create_encoder_decoder();
 
     SV *encode(SV *ref);
-    SV *decode(const char *buffer, STRLEN bufsize);
+    SV *decode(const char *buffer, STRLEN bufsize, bool damn);
     SV *encode_json(SV *ref);
-    SV *decode_json(const char *buffer, STRLEN bufsize);
+    SV *decode_json(const char *buffer, STRLEN bufsize, bool damn);
     bool check(SV *ref);
 
     const char *last_error_message() const;

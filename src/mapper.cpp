@@ -296,7 +296,8 @@ Mapper::DecoderHandlers *Mapper::DecoderHandlers::on_start_sub_message(DecoderHa
         cxt->seen_oneof.resize(cxt->seen_oneof.size() + 1);
         cxt->seen_oneof.back().resize(oneof_count, -1);
     }
-    sv_bless(target, cxt->mappers.back()->stash);
+    if (!cxt->damn)
+        sv_bless(target, cxt->mappers.back()->stash);
 
     return cxt;
 }
@@ -825,25 +826,29 @@ SV *Mapper::encode_json(SV *ref) {
     return result;
 }
 
-SV *Mapper::decode(const char *buffer, STRLEN bufsize) {
+SV *Mapper::decode(const char *buffer, STRLEN bufsize, bool damn) {
     if (pb_decoder == NULL)
         croak("It looks like resolve_references() was not called (and please use map() anyway)");
     status.Clear();
     pb_decoder->Reset();
+    decoder_callbacks.damn = damn;
     decoder_callbacks.prepare(newHV());
 
     SV *result = NULL;
     if (BufferSource::PutBuffer(buffer, bufsize, pb_decoder->input()))
-        result = sv_bless(newRV_inc(decoder_callbacks.get_target()), stash);
+        result = newRV_inc(decoder_callbacks.get_target());
+    if (result && !damn)
+        result = sv_bless(result, stash);
     decoder_callbacks.clear();
 
     return result;
 }
 
-SV *Mapper::decode_json(const char *buffer, STRLEN bufsize) {
+SV *Mapper::decode_json(const char *buffer, STRLEN bufsize, bool damn) {
     if (pb_decoder == NULL)
         croak("It looks like resolve_references() was not called (and please use map() anyway)");
     status.Clear();
+    decoder_callbacks.damn = damn;
     decoder_callbacks.prepare(newHV());
     // if an exception was thrown
     if (json_decoder != NULL)
@@ -854,7 +859,9 @@ SV *Mapper::decode_json(const char *buffer, STRLEN bufsize) {
 
     SV *result = NULL;
     if (BufferSource::PutBuffer(buffer, bufsize, json_decoder->input()))
-        result = sv_bless(newRV_inc(decoder_callbacks.get_target()), stash);
+        result = newRV_inc(decoder_callbacks.get_target());
+    if (result && !damn)
+        result = sv_bless(result, stash);
     decoder_callbacks.clear();
     upb_env_free(&env, json_decoder);
     json_decoder = NULL;
